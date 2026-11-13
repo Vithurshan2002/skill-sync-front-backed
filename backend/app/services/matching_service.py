@@ -1,3 +1,5 @@
+# Filter eligible workers using service, price, availability, and location rules.
+
 from sqlalchemy.orm import Session
 
 from app import models as m
@@ -24,6 +26,7 @@ def recommendations(
             "category", "Select a service category manually; no classification model is installed."
         )
     statement = worker_query(request.category.label, None, filters.available, filters.max_rate)
+    # Apply service coverage before limiting results; ordering is alphabetical, not a score.
     workers = [worker for worker in db.scalars(statement) if covers_location(worker, request)][:50]
     return {
         "requestId": request.id,

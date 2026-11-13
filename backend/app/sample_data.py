@@ -12,6 +12,7 @@ from app.core.auth import password_hash
 
 
 def sample_id(key: str) -> str:
+    # Stable IDs let later seed runs recognise the same demonstration records.
     return str(uuid5(NAMESPACE_URL, "skillsync/local-samples/v1/" + key))
 
 

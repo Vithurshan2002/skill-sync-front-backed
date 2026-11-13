@@ -1,3 +1,5 @@
+# Business errors carry HTTP status and field details; main.py turns them into JSON responses.
+
 class ApiError(Exception):
     def __init__(self, status: int, code: str, message: str, fields: dict | None = None):
         self.status = status

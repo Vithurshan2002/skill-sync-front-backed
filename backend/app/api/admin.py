@@ -1,3 +1,5 @@
+# Administrator-only inspection and review endpoints. Admin dependencies protect every route.
+
 from typing import Literal
 
 from fastapi import APIRouter, Query
@@ -33,6 +35,7 @@ def entity_query(entity: Entity, search: str | None = None, pending_only: bool =
     statement = select(model)
     if entity == "customers":
         statement = statement.where(m.User.role == "customer")
+    # Match review_ready() in SQL so the count and pages exclude incomplete applications.
     if pending_only and entity == "workers":
         statement = statement.where(
             m.Worker.approval_status == "pending",
@@ -48,6 +51,7 @@ def entity_query(entity: Entity, search: str | None = None, pending_only: bool =
             for column in model.__table__.columns
             if isinstance(column.type, String) and column.name not in {"password_hash", "photo_key"}
         ]
+        # Treat search text literally: a typed % or _ should not match unrelated records.
         predicates = [
             func.lower(cast(column, String)).contains(needle, autoescape=True) for column in fields
         ]

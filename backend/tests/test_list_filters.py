@@ -1,3 +1,5 @@
+# Verify that filters affect both records and totals without weakening ownership checks.
+
 from datetime import UTC, datetime, timedelta
 
 from tests.helpers import account, booking, service_request, transition, worker

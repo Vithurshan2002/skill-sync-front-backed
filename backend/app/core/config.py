@@ -1,9 +1,12 @@
+# Read local settings from backend/.env while allowing environment variables to override them.
+
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
+# Resolve paths from this file so startup works from either the repository or backend folder.
 ROOT = Path(__file__).resolve().parents[2]
 
 

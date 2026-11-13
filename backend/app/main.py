@@ -1,3 +1,5 @@
+# Build the API, attach shared dependencies, and translate failures into one error format.
+
 import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -20,6 +22,7 @@ logger = logging.getLogger("skillsync")
 
 
 def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
+    # Tests can supply an isolated engine without changing the normal startup path.
     settings = settings or Settings()
     engine = engine or make_engine(settings)
 
@@ -61,6 +64,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_request: Request, exception: RequestValidationError):
+        # Return field messages only; validation input can contain passwords or other secrets.
         fields = defaultdict(list)
         for error in exception.errors():
             key = (
@@ -134,6 +138,7 @@ def create_app(settings: Settings | None = None, engine=None) -> FastAPI:
 
     @app.get("/health/ready", tags=["Health"])
     def readiness():
+        # Readiness checks migrated columns as well as connectivity; liveness does neither.
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
             connection.execute(select(models.Category.id).limit(1))

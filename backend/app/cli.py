@@ -1,3 +1,5 @@
+# Explicit local setup commands for database creation, migrations, sample records, and admins.
+
 import argparse
 import getpass
 import re

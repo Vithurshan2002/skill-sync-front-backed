@@ -1,3 +1,5 @@
+# Run Alembic against the same settings and model metadata as the application.
+
 from logging.config import fileConfig
 
 from alembic import context
@@ -21,6 +23,7 @@ if context.is_offline_mode():
     with context.begin_transaction():
         context.run_migrations()
 else:
+    # Tests provide a connection scoped to their temporary schema; normal CLI runs create one.
     provided_connection = config.attributes.get("connection")
 
     def run(connection):

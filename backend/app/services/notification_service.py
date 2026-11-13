@@ -1,3 +1,5 @@
+# Stage notifications in the caller's transaction and mark owned notifications as read.
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -6,6 +8,7 @@ from app.core.errors import missing
 
 
 def notify(db: Session, user_id: str, message: str, path: str) -> None:
+    # Leave the commit to the caller so the update and its notification succeed together.
     db.add(m.Notification(user_id=user_id, message=message, target_path=path))
 
 

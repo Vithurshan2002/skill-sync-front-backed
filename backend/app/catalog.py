@@ -1,3 +1,5 @@
+# Stable service identifiers and labels used by requests, worker profiles, and category seeding.
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

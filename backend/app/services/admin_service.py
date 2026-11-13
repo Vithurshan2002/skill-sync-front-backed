@@ -47,6 +47,7 @@ def verify_worker(worker_id: str, data: s.VerificationPatch, admin: m.User, db: 
     record.approval_status = "approved" if data.verified else "changes_requested"
     record.review_note = data.note
     record.reviewed_at = m.utcnow()
+    # Approval closes this review cycle; requested changes keep the original comparison.
     if data.verified:
         record.review_baseline = None
     elif record.review_baseline is None:

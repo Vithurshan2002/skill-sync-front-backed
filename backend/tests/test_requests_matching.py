@@ -1,3 +1,5 @@
+# Check request ownership and rule-based matching without inventing model scores.
+
 import pytest
 
 from tests.helpers import account, request_payload, service_request, worker

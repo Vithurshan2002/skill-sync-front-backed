@@ -24,6 +24,7 @@ def register_account(db: Session, data: s.Register, token_ttl_minutes: int) -> d
     if user.role == "worker":
         db.add(m.Worker(user_id=user.id))
         db.flush()
+    # Create the account, optional worker profile, and initial token in one transaction.
     result = issue_token(db, user, token_ttl_minutes)
     db.commit()
     return result

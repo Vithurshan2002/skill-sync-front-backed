@@ -26,10 +26,12 @@ async def upload_photo(request: Request, user: CurrentUser, db: Db):
     }:
         invalid("photo", "Choose a JPG, PNG or WebP image.")
     data = bytearray()
+    # Enforce the size limit while reading, rather than buffering an unrestricted upload.
     async for chunk in request.stream():
         if len(data) + len(chunk) > MAX_BYTES:
             invalid("photo", "The photo must be 2 MB or smaller.")
         data.extend(chunk)
+    # Image decoding and synchronous database writes must not block the async request loop.
     return await run_in_threadpool(
         photo_service.save_photo,
         db,

@@ -1,3 +1,5 @@
+# Apply profile edits and reopen worker review when approval-relevant details change.
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -25,6 +27,7 @@ def patch_customer(db: Session, user: m.User, data: s.ProfilePatch) -> m.User:
 
 def patch_worker(db: Session, user: m.User, data: s.WorkerPatch) -> m.Worker:
     record = own_worker(db, user, lock=True)
+    # An omitted field stays unchanged; an explicit null can clear an optional value.
     values = data.model_dump(exclude_unset=True)
     validate_location(record, values, worker=True)
     before = profile_snapshot(record)
@@ -57,6 +60,7 @@ def patch_worker(db: Session, user: m.User, data: s.WorkerPatch) -> m.Worker:
         )
     after = profile_snapshot(record)
     if before != after:
+        # Keep the first snapshot so repeated edits do not erase changes awaiting review.
         if record.review_baseline is None:
             record.review_baseline = before
         record.approval_status = "pending"

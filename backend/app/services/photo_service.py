@@ -34,6 +34,7 @@ def thumbnail(data: bytes) -> bytes:
                 if getattr(source, "n_frames", 1) != 1:
                     invalid("photo", "Choose a still image, not an animation.")
                 source.load()
+                # Apply camera orientation before resizing, then flatten transparency for JPEG.
                 oriented = ImageOps.exif_transpose(source).convert("RGBA")
                 fitted = ImageOps.contain(oriented, (512, 512), method=Image.Resampling.LANCZOS)
                 clean = Image.new("RGB", fitted.size, "white")
@@ -76,9 +77,11 @@ def save_photo(db: Session, user: m.User, folder: Path, data: bytes) -> dict:
         worker.photo_key = key
         db.commit()
     except Exception:
+        # A database rollback cannot remove a file, so undo the new file separately.
         db.rollback()
         remove_file(folder, key)
         raise
+    # Remove the old image only after the database points to the new one.
     remove_file(folder, old_key)
     return {"data": out.worker(worker, private=True)}
 

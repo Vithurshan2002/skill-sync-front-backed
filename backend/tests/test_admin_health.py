@@ -1,3 +1,5 @@
+# Check health endpoints, administrator access, audit records, and safe error responses.
+
 from sqlalchemy import func, select
 
 from app.models import AuditEvent, User

@@ -1,3 +1,5 @@
+# SQLAlchemy table definitions. Database constraints also protect writes outside the API.
+
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -30,6 +32,7 @@ class Base(DeclarativeBase):
     pass
 
 
+# Account identity is shared across roles; worker-specific fields live in Worker.
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (CheckConstraint("role IN ('customer','worker','admin')", name="user_role"),)
@@ -116,6 +119,7 @@ class Worker(Base):
     metrics: Mapped[list["WorkerMetric"]] = relationship(lazy="selectin")
 
 
+# A worker can offer several categories; each worker/category pair is stored only once.
 class WorkerCategory(Base):
     __tablename__ = "worker_categories"
 
@@ -132,6 +136,7 @@ class WorkerTown(Base):
     town: Mapped[str] = mapped_column(String(100))
 
 
+# These totals come from confirmed bookings, not from a trained model.
 class WorkerMetric(Base):
     __tablename__ = "worker_metrics"
 
@@ -184,6 +189,7 @@ class Booking(Base):
             "(scheduled_end_at IS NULL OR deadline_at >= scheduled_end_at)))",
             name="booking_time_order",
         ),
+        # Prevent concurrent bookings for one request while allowing cancelled-job history.
         Index(
             "uq_active_booking_request",
             "request_id",
@@ -224,6 +230,7 @@ class Booking(Base):
     complaint: Mapped["Complaint | None"] = relationship(lazy="selectin", uselist=False)
 
 
+# Append status changes here so the current booking status does not erase its history.
 class BookingEvent(Base):
     __tablename__ = "booking_events"
 
@@ -278,6 +285,7 @@ class Notification(Base):
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+# Keep the administrator and decision details for later review of privileged changes.
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 

@@ -1,3 +1,5 @@
+# Create and edit customer requests while preserving the details of booked work.
+
 from sqlalchemy.orm import Session
 
 from app import models as m
@@ -27,6 +29,7 @@ def patch_request(
     db: Session, user: m.User, record_id: str, data: s.RequestPatch
 ) -> m.ServiceRequest:
     require_role(user, "customer")
+    # Lock against simultaneous booking so agreed request details cannot change mid-booking.
     record = request_record(db, user, record_id, lock=True)
     if record.status != "submitted":
         conflict("Only an unbooked request can be edited.")

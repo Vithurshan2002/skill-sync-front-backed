@@ -1,3 +1,5 @@
+# Build explicit API payloads rather than exposing ORM objects or private columns directly.
+
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -39,6 +41,7 @@ def category(value: m.Category) -> dict:
 
 
 def worker(value: m.Worker, private: bool = False) -> dict:
+    # Exact coordinates and review feedback are included only for private profile responses.
     metrics = {metric.category.label: metric.completed_jobs for metric in value.metrics}
     labels = sorted(service.category.label for service in value.services)
     return {

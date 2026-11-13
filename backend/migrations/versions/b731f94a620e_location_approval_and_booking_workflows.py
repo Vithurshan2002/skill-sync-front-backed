@@ -9,6 +9,7 @@ branch_labels = None
 depends_on = None
 
 
+# Existing records may have no location or deadline; do not invent missing historical values.
 def upgrade():
     for table in ["workers", "service_requests"]:
         op.add_column(table, sa.Column("latitude", sa.Numeric(10, 7), nullable=True))

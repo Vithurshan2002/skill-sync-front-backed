@@ -1,3 +1,5 @@
+# HTTP boundary for customer and worker features; services handle business mutations.
+
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
@@ -221,6 +223,7 @@ def bookings(
         m.Booking.scheduled_at.asc() if order == "scheduled_asc" else m.Booking.scheduled_at.desc(),
         m.Booking.id,
     )
+    # Dashboard groups reuse the ownership-scoped query before pagination is applied.
     if group:
         statuses = ["accepted", "in_progress", "awaiting_confirmation"]
         if group == "active":

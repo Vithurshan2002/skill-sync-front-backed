@@ -1,3 +1,5 @@
+# Upgrade legacy records and check that historical facts are preserved.
+
 from datetime import UTC, datetime
 from uuid import uuid4
 

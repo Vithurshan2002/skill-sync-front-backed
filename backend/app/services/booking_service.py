@@ -1,3 +1,5 @@
+# Booking lifecycle rules, appointment conflicts, reviews, and complaints.
+
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -47,6 +49,7 @@ def create_booking(db: Session, user: m.User, data: s.BookingCreate) -> m.Bookin
         conflict("This request already has an active or completed booking.")
     if request.category_id is None:
         invalid("requestId", "Select a service category before booking.")
+    # Serialize booking attempts for this worker before checking overlapping appointments.
     worker = db.scalar(select(m.Worker).where(m.Worker.id == data.worker_id).with_for_update())
     if worker is None:
         missing()
@@ -62,6 +65,7 @@ def create_booking(db: Session, user: m.User, data: s.BookingCreate) -> m.Bookin
             "This worker must be approved, available, and offer this service in your location.",
         )
     ensure_booking_time_available(db, worker.id, data.scheduled_at, data.scheduled_end_at)
+    # Keep the agreed rate on the booking even if the worker changes their profile rate later.
     record = m.Booking(
         request_id=request.id,
         customer_id=user.id,
@@ -87,6 +91,7 @@ def transition_booking(
 ) -> m.Booking:
     require_role(user, "customer", "worker")
     record = booking_record(db, user, record_id, lock=True)
+    # Workers report completion; only the customer can confirm it or return it for more work.
     allowed = (
         {
             "pending": {"cancelled"},

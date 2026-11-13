@@ -1,3 +1,5 @@
+# Resolve bearer tokens to accounts and enforce role and worker ownership checks.
+
 import hashlib
 import secrets
 from datetime import timedelta
@@ -27,6 +29,7 @@ def token_digest(token: str) -> str:
 def issue_token(db: Session, user: User, minutes: int) -> dict:
     token = secrets.token_urlsafe(48)
     expires = utcnow() + timedelta(minutes=minutes)
+    # Store only the digest so a database leak does not expose usable access tokens.
     db.add(AccessToken(digest=token_digest(token), user_id=user.id, expires_at=expires))
     db.flush()
     return {
@@ -38,6 +41,7 @@ def issue_token(db: Session, user: User, minutes: int) -> dict:
 
 
 def verify_password(password: str, user: User | None) -> bool:
+    # Run the password check even for an unknown email to reduce timing differences.
     return (
         password_hash.verify(password, user.password_hash if user else _dummy_hash)
         and user is not None

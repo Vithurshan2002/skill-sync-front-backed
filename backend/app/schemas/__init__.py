@@ -1,3 +1,5 @@
+# Request validation and response contracts shared by all API routes.
+
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -17,6 +19,7 @@ from pydantic.alias_generators import to_camel
 
 
 class Schema(BaseModel):
+    # Python uses snake_case; the frontend contract uses camelCase and rejects unknown fields.
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
 
@@ -57,6 +60,7 @@ def future(value: datetime) -> datetime:
     return value
 
 
+# Reject naive timestamps so appointment comparisons do not depend on the server timezone.
 FutureTime = Annotated[AwareDatetime, AfterValidator(future)]
 
 
@@ -64,6 +68,7 @@ class Register(Schema):
     name: Name
     email: EmailStr
     password: Password
+    # Public registration cannot grant administrator privileges.
     role: Literal["customer", "worker"]
     town: Town
 
@@ -91,6 +96,7 @@ class ProfilePatch(Schema):
 
     @model_validator(mode="after")
     def reject_required_nulls(self):
+        # PATCH may omit required fields, but must not clear them with an explicit null.
         for field in self.model_fields_set - {
             "phone",
             "latitude",

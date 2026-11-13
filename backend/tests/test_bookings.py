@@ -1,3 +1,5 @@
+# Exercise booking transitions and concurrent writes against a real PostgreSQL database.
+
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 

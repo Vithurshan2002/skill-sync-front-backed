@@ -1,3 +1,5 @@
+# Provide isolated PostgreSQL schemas and temporary photo storage for API tests.
+
 from uuid import uuid4
 
 import pytest

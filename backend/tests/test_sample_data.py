@@ -1,3 +1,5 @@
+# Ensure sample seeding is repeatable and does not overwrite existing account edits.
+
 from sqlalchemy import func, select
 
 from app import models as m

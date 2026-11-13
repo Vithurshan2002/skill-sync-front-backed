@@ -1,3 +1,5 @@
+# Create PostgreSQL connections and provide a separate session for each request.
+
 from collections.abc import Generator
 
 from fastapi import Request
@@ -15,9 +17,11 @@ def make_engine(settings: Settings) -> Engine:
 
 
 def session_factory(engine: Engine) -> sessionmaker[Session]:
+    # Services serialize records after committing, so keep their loaded values available.
     return sessionmaker(engine, expire_on_commit=False)
 
 
 def get_db(request: Request) -> Generator[Session, None, None]:
+    # Closing the session also rolls back unfinished work if a request fails.
     with request.app.state.sessions() as session:
         yield session

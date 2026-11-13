@@ -1,3 +1,5 @@
+# Shared filtered queries, ownership-scoped lookups, and pagination metadata.
+
 from collections.abc import Callable
 from math import ceil
 
@@ -19,6 +21,7 @@ def category_by_label(db: Session, label: str | None) -> m.Category | None:
 
 
 def page_result(db: Session, statement, serializer: Callable, page: int, per_page: int) -> dict:
+    # The caller has already applied filters and ownership rules; count that same result set.
     total = db.scalar(select(func.count()).select_from(statement.order_by(None).subquery())) or 0
     records = db.scalars(statement.offset((page - 1) * per_page).limit(per_page)).all()
     return {

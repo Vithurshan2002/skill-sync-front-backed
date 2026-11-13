@@ -1,3 +1,5 @@
+# Cover image validation, photo ownership, replacement, removal, and storage failures.
+
 from io import BytesIO
 
 import pytest
