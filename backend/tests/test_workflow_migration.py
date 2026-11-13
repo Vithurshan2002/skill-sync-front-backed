@@ -5,7 +5,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import MetaData, create_engine, text
 
-from app.config import ROOT, Settings
+from app.core.config import ROOT, Settings
 
 
 def test_upgrade_preserves_legacy_records_without_fabricating_deadlines_or_confirmation():

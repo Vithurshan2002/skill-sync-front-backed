@@ -26,6 +26,17 @@ Dependency versions are pinned in `frontend/composer.lock`, `frontend/package-lo
 
 Laravel calls the API over HTTP; it does not connect directly to PostgreSQL. Backend access tokens are encrypted in server-side Laravel sessions. The backend enforces role and record-ownership checks.
 
+### Code organization
+
+- Frontend pages depend on the `SkillSyncGateway` contract. `FastApiSkillSyncGateway` implements it, and `BackendClient` handles HTTP transport, authentication and API errors.
+- Customer and worker profile pages both extend `Filament/Shared/ProfilePage`; shared loading/saving behavior is separate from each role's form fields.
+- Backend business operations in `backend/app/services/` are grouped into `account_service.py`, `profile_service.py`, `request_service.py`, `booking_service.py`, `matching_service.py` and `notification_service.py`.
+- `service_queries.py` provides shared pagination, eligible-worker queries and ownership-scoped record lookup. `workflows.py` contains shared approval and location rules.
+- API routers import feature services directly. Package initializers avoid eager service imports and circular dependencies.
+- Write operations in these services own their commits; query helpers and notification creation participate in the caller's transaction. Booking lock order and conflict checks are preserved.
+
+This is a layered application with incremental refactoring, not a strict Clean Architecture implementation. Admin/photo modules still combine HTTP and service responsibilities, frontend gateway responses remain arrays, and workspace lists still aggregate API pages for local filtering.
+
 ## Fresh clone: complete Windows setup
 
 Follow these steps in **PowerShell**. The commands below start from the repository root unless stated otherwise. A Git clone does not include your PostgreSQL records, private environment files or installed dependencies.

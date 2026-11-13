@@ -71,6 +71,7 @@ unavailable. Missing scores are displayed as unavailable, never fabricated. Matc
 is rule-based and alphabetical, not a learned quality ranking.
 
 All business calls go through SkillSyncGateway and FastApiSkillSyncGateway.
+Customer and worker profile pages share `app/Filament/Shared/ProfilePage.php` for mounting, form state and save feedback; neither role's page inherits the other role's page. Their role-specific fields and worker photo controls stay in the corresponding page classes.
 BackendClient maps API errors, transports per-user tokens, and follows pagination
 for workspace lists. Workspace tables currently collect all API pages for their
 local filters; the public directory uses server pagination. There is no automatic

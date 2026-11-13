@@ -9,10 +9,10 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.auth import password_hash
 from app.catalog import seed_categories
-from app.config import ROOT, Settings
-from app.database import make_engine, session_factory
+from app.core.auth import password_hash
+from app.core.config import ROOT, Settings
+from app.core.database import make_engine, session_factory
 from app.models import User
 from app.schemas import Register
 

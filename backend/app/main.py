@@ -9,10 +9,11 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.exceptions import HTTPException
 
-from app import admin, models, photos, routes
-from app.config import Settings
-from app.database import make_engine, session_factory
-from app.errors import ApiError
+from app import models
+from app.api import admin, photos, routes
+from app.core.config import Settings
+from app.core.database import make_engine, session_factory
+from app.core.errors import ApiError
 from app.schemas import ErrorEnvelope
 
 logger = logging.getLogger("skillsync")

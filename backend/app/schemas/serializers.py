@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import models as m
-from app.workflows import profile_changes, review_ready
+from app.services.workflows import profile_changes, review_ready
 
 
 def aware(value: datetime | None) -> datetime | None:

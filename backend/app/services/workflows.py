@@ -3,7 +3,7 @@
 from math import asin, cos, radians, sin, sqrt
 
 from app import models as m
-from app.errors import invalid
+from app.core.errors import invalid
 
 REVIEW_FIELDS = {
     "name": "Name",

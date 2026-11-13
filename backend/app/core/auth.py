@@ -9,10 +9,10 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.errors import ApiError
+from app.core.database import get_db
+from app.core.errors import ApiError
 from app.models import AccessToken, User, utcnow
-from app.serializers import aware, identity
+from app.schemas.serializers import aware, identity
 
 password_hash = PasswordHash.recommended()
 _dummy_hash = password_hash.hash(secrets.token_urlsafe(32))

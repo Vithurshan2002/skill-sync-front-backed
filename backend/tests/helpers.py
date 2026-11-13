@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from app.auth import password_hash
+from app.core.auth import password_hash
 from app.models import User, Worker
 
 PASSWORD = "Test-password-for-SkillSync!"

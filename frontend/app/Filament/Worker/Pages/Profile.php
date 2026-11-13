@@ -3,6 +3,7 @@
 namespace App\Filament\Worker\Pages;
 
 use App\Filament\Shared\LocationFields;
+use App\Filament\Shared\ProfilePage;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -15,7 +16,7 @@ use Filament\Schemas\Schema;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
-class Profile extends \App\Filament\Customer\Pages\Profile
+class Profile extends ProfilePage
 {
     use WithFileUploads;
 

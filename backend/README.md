@@ -191,12 +191,27 @@ For existing installations, back up PostgreSQL and run `.venv\Scripts\alembic.ex
 
 ## Database and application structure
 
+```text
+app/
+  api/           # HTTP routers, photo endpoints and pagination dependencies
+  core/          # Settings, database sessions, authentication and errors
+  services/      # Feature operations, shared queries and workflow rules
+  models/        # SQLAlchemy entities and constraints
+  schemas/       # Pydantic contracts and response serializers
+  main.py        # FastAPI application factory and health endpoints
+  cli.py         # Database setup, seed and administrator commands
+  catalog.py     # Stable service categories
+  sample_data.py # Optional demo-data generation
+```
+
+Configuration resolves `backend/.env` and photo storage from the backend root. Startup remains `uvicorn app.main:app`; CLI commands remain `python -m app.cli`. Alembic uses the same model metadata and existing migrations. No database changes are required.
+
 - `app/main.py`: application factory, health checks, common error responses.
-- `app/routes.py`, `app/admin.py`: public/authenticated and administrator endpoints.
-- `app/auth.py`: Argon2 password hashing and expiring, revocable opaque bearer credentials. Only SHA-256 token digests are stored.
-- `app/schemas.py`: validated camelCase payloads and response schemas. Unknown input keys are rejected.
-- `app/services.py`: ownership, matching rules, transactions, booking lifecycle, notifications.
-- `app/models.py`: PostgreSQL entities and constraints.
+- `app/api/routes.py`, `app/api/admin.py`: public/authenticated and administrator endpoints.
+- `app/core/auth.py`: Argon2 password hashing and expiring, revocable opaque bearer credentials. Only SHA-256 token digests are stored.
+- `app/schemas/__init__.py`: validated camelCase payloads and response schemas. Unknown input keys are rejected.
+- `app/services/`: ownership, matching rules, transactions, booking lifecycle, notifications.
+- `app/models/__init__.py`: PostgreSQL entities and constraints.
 - `app/catalog.py`: stable category catalog only, not a worker/model training dataset.
 - `migrations/`: versioned Alembic migrations, including the unique partial index preventing two active bookings for one request.
 - `tests/`: PostgreSQL API integration and concurrent-submission tests.
@@ -224,6 +239,14 @@ No training dataset or model artifact has been supplied. This backend does not r
 Email verification/recovery, payment processing, email/SMS delivery, account suspension, model training, and production deployment are outside this version. Before public deployment, configure HTTPS, authentication rate limits, a dedicated least-privilege database role, and backup/monitoring. The API uses bearer headers, exposes no cross-origin browser permissions, and binds to loopback in the documented startup command.
 
 ## Verification
+
+### Service organization
+
+Application operations in `app/services/` are split into `account_service.py`, `profile_service.py`, `request_service.py`, `booking_service.py`, `matching_service.py`, and `notification_service.py`. Shared query/pagination helpers are in `service_queries.py`; profile-review and location rules remain in `workflows.py`. Routers import the feature modules directly; the services package initializer does not eagerly import them.
+
+Service write operations commit their own transaction. Helpers such as `notify()` only stage changes so booking events, notifications and record updates commit together. The refactor preserves booking row-lock order, ownership checks, endpoint paths and response schemas. No database migration is required for this restructuring.
+
+### Running checks
 
 The test suite covers approval changes, coordinate validation, radius matching, concurrent overlapping bookings, customer confirmation/disputes, complaints, migration preservation, and photo validation/storage. Run the commands below for the result on your checkout. The runner may report an upstream Starlette/httpx deprecation warning.
 

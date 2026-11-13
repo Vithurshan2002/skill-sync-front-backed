@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 from app.catalog import seed_categories
-from app.config import ROOT, Settings
-from app.database import session_factory
+from app.core.config import ROOT, Settings
+from app.core.database import session_factory
 from app.main import create_app
 
 

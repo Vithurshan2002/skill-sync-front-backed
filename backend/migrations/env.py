@@ -2,8 +2,8 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from app.config import Settings
-from app.database import make_engine
+from app.core.config import Settings
+from app.core.database import make_engine
 from app.models import Base
 
 config = context.config

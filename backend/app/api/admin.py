@@ -5,12 +5,13 @@ from sqlalchemy import func, select
 
 from app import models as m
 from app import schemas as s
-from app import serializers as out
-from app.auth import Admin, Db
-from app.errors import conflict, invalid, missing
-from app.routes import PageNumber, PageSize
-from app.services import notify, page_result
-from app.workflows import profile_changes, profile_snapshot, review_ready
+from app.api.dependencies import PageNumber, PageSize
+from app.core.auth import Admin, Db
+from app.core.errors import conflict, invalid, missing
+from app.schemas import serializers as out
+from app.services.notification_service import notify
+from app.services.service_queries import page_result
+from app.services.workflows import profile_changes, profile_snapshot, review_ready
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Administration"])
 Entity = Literal[

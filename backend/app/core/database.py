@@ -4,7 +4,7 @@ from fastapi import Request
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.config import Settings
+from app.core.config import Settings
 
 
 def make_engine(settings: Settings) -> Engine:

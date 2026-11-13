@@ -7,8 +7,8 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app import models as m
-from app.auth import password_hash
 from app.catalog import CATALOG
+from app.core.auth import password_hash
 
 
 def sample_id(key: str) -> str:

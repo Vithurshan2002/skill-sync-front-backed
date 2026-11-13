@@ -14,9 +14,9 @@ from starlette.concurrency import run_in_threadpool
 
 from app import models as m
 from app import schemas as s
-from app import serializers as out
-from app.auth import CurrentUser, Db, own_worker
-from app.errors import invalid, missing
+from app.core.auth import CurrentUser, Db, own_worker
+from app.core.errors import invalid, missing
+from app.schemas import serializers as out
 
 router = APIRouter(prefix="/api/v1", tags=["Worker photos"])
 MAX_BYTES = 2 * 1024 * 1024

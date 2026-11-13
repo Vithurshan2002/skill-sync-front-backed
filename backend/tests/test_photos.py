@@ -3,8 +3,8 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
+from app.api.photos import thumbnail
 from app.models import Worker
-from app.photos import thumbnail
 from tests.helpers import account, worker
 
 
