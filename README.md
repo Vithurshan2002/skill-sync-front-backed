@@ -33,9 +33,10 @@ Laravel calls the API over HTTP; it does not connect directly to PostgreSQL. Bac
 - Backend business operations in `backend/app/services/` are grouped into `account_service.py`, `profile_service.py`, `request_service.py`, `booking_service.py`, `matching_service.py` and `notification_service.py`.
 - `service_queries.py` provides shared pagination, eligible-worker queries and ownership-scoped record lookup. `workflows.py` contains shared approval and location rules.
 - API routers import feature services directly. Package initializers avoid eager service imports and circular dependencies.
+- `admin_service.py` owns administrative writes/audit events; `photo_service.py` owns image processing and transactional file replacement.
 - Write operations in these services own their commits; query helpers and notification creation participate in the caller's transaction. Booking lock order and conflict checks are preserved.
 
-This is a layered application with incremental refactoring, not a strict Clean Architecture implementation. Admin/photo modules still combine HTTP and service responsibilities, frontend gateway responses remain arrays, and workspace lists still aggregate API pages for local filtering.
+This is a layered application with incremental refactoring, not a strict Clean Architecture implementation. Admin writes and photo processing/storage use dedicated services. Gateway responses remain arrays; this is not a full domain/entity abstraction.
 
 ## Fresh clone: complete Windows setup
 
@@ -382,7 +383,7 @@ This command is restricted to the local `skillsync_backend` database. It prints 
 - Worker photos are stored on the backend filesystem. Back up the photo directory alongside PostgreSQL; a database backup alone does not include images.
 - Removable selected-filter chips are not enabled; the directory uses its standard filter controls and Clear filters.
 - A consistent real/demo/test provenance field across business records and the API is not implemented.
-- Workspace lists generally collect API pages for local filtering. The public directory uses server-side pagination; the notification bell uses filtered metadata.
+- Bookings/jobs, admin records, notifications and customer requests use server-side pagination. Filters are applied before counts and paging. Dashboards fetch bounded previews; completed history links to the paginated jobs list. The notification bell uses filtered metadata.
 
 The large handoff document is a reference specification/snapshot, not proof that every feature described there exists in this checkout. Use this README and the current source to determine implementation status.
 

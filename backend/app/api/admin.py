@@ -1,17 +1,17 @@
 from typing import Literal
 
-from fastapi import APIRouter
-from sqlalchemy import func, select
+from fastapi import APIRouter, Query
+from sqlalchemy import String, cast, func, or_, select
 
 from app import models as m
 from app import schemas as s
 from app.api.dependencies import PageNumber, PageSize
 from app.core.auth import Admin, Db
-from app.core.errors import conflict, invalid, missing
+from app.core.errors import missing
 from app.schemas import serializers as out
-from app.services.notification_service import notify
+from app.services import admin_service
 from app.services.service_queries import page_result
-from app.services.workflows import profile_changes, profile_snapshot, review_ready
+from app.services.workflows import review_ready
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Administration"])
 Entity = Literal[
@@ -28,11 +28,39 @@ MODELS = {
 }
 
 
-def entity_query(entity: Entity):
+def entity_query(entity: Entity, search: str | None = None, pending_only: bool = False):
     model = MODELS[entity]
     statement = select(model)
     if entity == "customers":
         statement = statement.where(m.User.role == "customer")
+    if pending_only and entity == "workers":
+        statement = statement.where(
+            m.Worker.approval_status == "pending",
+            m.Worker.services.any(),
+            m.Worker.towns.any(),
+            m.Worker.rate_lkr > 0,
+            func.length(m.Worker.bio) >= 15,
+        )
+    if search and search.strip():
+        needle = search.strip().lower()
+        fields = [
+            column
+            for column in model.__table__.columns
+            if isinstance(column.type, String) and column.name not in {"password_hash", "photo_key"}
+        ]
+        predicates = [
+            func.lower(cast(column, String)).contains(needle, autoescape=True) for column in fields
+        ]
+        if entity == "workers":
+            predicates.append(
+                m.Worker.user.has(
+                    or_(
+                        func.lower(m.User.name).contains(needle, autoescape=True),
+                        func.lower(m.User.town).contains(needle, autoescape=True),
+                    )
+                )
+            )
+        statement = statement.where(or_(*predicates))
     return statement.order_by(model.id)
 
 
@@ -75,9 +103,21 @@ def dashboard(admin: Admin, db: Db):
 
 
 @router.get("/{entity}", response_model=s.Page[dict])
-def records(entity: Entity, admin: Admin, db: Db, page: PageNumber = 1, per_page: PageSize = 20):
+def records(
+    entity: Entity,
+    admin: Admin,
+    db: Db,
+    page: PageNumber = 1,
+    per_page: PageSize = 20,
+    search: str | None = Query(default=None, max_length=200),
+    pending_only: bool = Query(default=False, alias="pendingOnly"),
+):
     return page_result(
-        db, entity_query(entity), lambda record: serialize(entity, db, record), page, per_page
+        db,
+        entity_query(entity, search, pending_only),
+        lambda record: serialize(entity, db, record),
+        page,
+        per_page,
     )
 
 
@@ -91,94 +131,14 @@ def details(entity: Entity, record_id: str, admin: Admin, db: Db):
 
 @router.patch("/categories/{category_id}", response_model=s.Envelope[s.CategoryView])
 def update_category(category_id: str, data: s.CategoryPatch, admin: Admin, db: Db):
-    record = db.scalar(select(m.Category).where(m.Category.id == category_id).with_for_update())
-    if record is None:
-        missing()
-    before = out.category(record)
-    record.description = data.description
-    record.example_request = data.example_request
-    db.add(
-        m.AuditEvent(
-            actor_id=admin.id,
-            action="category.updated",
-            record_id=record.id,
-            details={"before": before, "after": out.category(record)},
-        )
-    )
-    db.commit()
-    return {"data": out.category(record)}
+    return admin_service.update_category(category_id, data, admin, db)
 
 
 @router.patch("/workers/{worker_id}/verification", response_model=s.Envelope[s.WorkerView])
 def verify_worker(worker_id: str, data: s.VerificationPatch, admin: Admin, db: Db):
-    record = db.scalar(select(m.Worker).where(m.Worker.id == worker_id).with_for_update())
-    if record is None:
-        missing()
-    before = record.verified
-    if data.verified and not review_ready(record):
-        invalid(
-            "verified",
-            "A complete biography, services, service towns and positive rate "
-            "are required for approval.",
-        )
-    changes = profile_changes(record)
-    reviewed_profile = profile_snapshot(record)
-    record.verified = data.verified
-    record.approval_status = "approved" if data.verified else "changes_requested"
-    record.review_note = data.note
-    record.reviewed_at = m.utcnow()
-    if data.verified:
-        record.review_baseline = None
-    elif record.review_baseline is None:
-        record.review_baseline = reviewed_profile
-    db.add(
-        m.AuditEvent(
-            actor_id=admin.id,
-            action="worker.verification",
-            record_id=record.id,
-            details={
-                "before": before,
-                "after": data.verified,
-                "note": data.note,
-                "profileChanges": changes,
-                "reviewedProfile": reviewed_profile,
-            },
-        )
-    )
-    notify(
-        db,
-        record.user_id,
-        f"Profile {'approved' if data.verified else 'changes requested'}: {data.note}"[:500],
-        "/worker/profile",
-    )
-    db.commit()
-    return {"data": out.worker(record, private=True)}
+    return admin_service.verify_worker(worker_id, data, admin, db)
 
 
 @router.patch("/complaints/{complaint_id}/resolution", response_model=s.Envelope[dict])
 def resolve_complaint(complaint_id: str, data: s.ComplaintResolution, admin: Admin, db: Db):
-    record = db.scalar(select(m.Complaint).where(m.Complaint.id == complaint_id).with_for_update())
-    if record is None:
-        missing()
-    if record.status != "pending":
-        conflict("This complaint has already received a final decision.")
-    record.status = data.status
-    record.resolution = data.resolution
-    record.resolved_at = m.utcnow()
-    record.resolved_by = admin.id
-    db.add(
-        m.AuditEvent(
-            actor_id=admin.id,
-            action="complaint.resolved",
-            record_id=record.id,
-            details={"status": data.status, "resolution": data.resolution},
-        )
-    )
-    booking = db.get(m.Booking, record.booking_id)
-    for recipient, path in [
-        (booking.customer_id, f"/customer/bookings/{booking.id}"),
-        (booking.worker.user_id, f"/worker/jobs/{booking.id}"),
-    ]:
-        notify(db, recipient, f"Complaint {data.status}: {booking.request.title}", path)
-    db.commit()
-    return {"data": out.complaint(record)}
+    return admin_service.resolve_complaint(complaint_id, data, admin, db)

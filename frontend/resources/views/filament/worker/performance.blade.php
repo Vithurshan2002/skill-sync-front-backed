@@ -1,4 +1,8 @@
 <x-filament-panels::page class="ss-worker-performance">
+    @if($loadError)
+        <x-api-error :message="$loadError" />
+    @else
+
     <div class="ss-alert"><x-filament::icon icon="heroicon-o-information-circle" /><div><strong>Your performance at a glance</strong><p>Your work history updates as you complete bookings and receive customer reviews.</p></div></div>
     <div class="ss-panel-columns">
         <section class="ss-card">
@@ -32,6 +36,7 @@
             @endif
         </aside>
     </div>
-    <section class="ss-card"><div class="ss-section-heading"><h2>Your completed bookings</h2><span class="ss-muted">Your booking history</span></div>@forelse(collect($performanceData['bookings'])->where('status','completed') as $booking)<a class="ss-record-row" href="/worker/jobs/{{ $booking['id'] }}"><div class="ss-record-copy"><strong>{{ $booking['request']['title'] ?? 'Completed service' }}</strong><span>{{ $booking['request']['category'] ?? '' }} · {{ $this->localDate($booking['scheduledAt']) }}</span></div><x-status-badge status="completed" /></a>@empty<div class="ss-empty"><p>Completed bookings will appear here as you finish jobs.</p></div>@endforelse</section>
+    <section class="ss-card"><div class="ss-section-heading"><h2>Recent completed bookings</h2><a class="ss-text-link" href="/worker/jobs?status=completed">View all completed bookings</a></div>@forelse(collect($performanceData['bookings'])->where('status','completed') as $booking)<a class="ss-record-row" href="/worker/jobs/{{ $booking['id'] }}"><div class="ss-record-copy"><strong>{{ $booking['request']['title'] ?? 'Completed service' }}</strong><span>{{ $booking['request']['category'] ?? '' }} · {{ $this->localDate($booking['scheduledAt']) }}</span></div><x-status-badge status="completed" /></a>@empty<div class="ss-empty"><p>Completed bookings will appear here as you finish jobs.</p></div>@endforelse</section>
+    @endif
 </x-filament-panels::page>
 

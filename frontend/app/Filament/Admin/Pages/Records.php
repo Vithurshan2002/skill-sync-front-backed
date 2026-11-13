@@ -47,8 +47,16 @@ class Records extends GatewayPage implements HasTable
 
     public string $search = '';
 
+    #[Url]
+    public int $pageNumber = 1;
+
+    private ?array $listResult = null;
+
+    private bool $listLoaded = false;
+
     public function updatedEntity(): void
     {
+        $this->pageNumber = 1;
         $this->recordId = '';
         $this->detailTab = 'profile';
         $this->search = '';
@@ -56,12 +64,37 @@ class Records extends GatewayPage implements HasTable
         $this->resetTable();
     }
 
-    private function matchesFilters(array $record): bool
+    public function updatedSearch(): void
     {
-        $pending = ($record['approvalStatus'] ?? '') === 'pending' && ($record['reviewReady'] ?? false);
+        $this->pageNumber = 1;
+        $this->resetTable();
+    }
 
-        return ($this->entity !== 'workers' || ! $this->pendingOnly || $pending)
-            && ($this->search === '' || str_contains(mb_strtolower(json_encode($record)), mb_strtolower($this->search)));
+    public function updatedPendingOnly(): void
+    {
+        $this->pageNumber = 1;
+        $this->resetTable();
+    }
+
+    public function updatedPageNumber(): void
+    {
+        $this->resetTable();
+    }
+
+    private function recordsPage(): ?array
+    {
+        if (! $this->listLoaded) {
+            abort_unless(in_array($this->entity, ['workers', 'customers', 'categories', 'requests', 'bookings', 'reviews', 'complaints'], true), 404);
+            $this->pageNumber = max(1, min(1000000, $this->pageNumber));
+            $this->listResult = $this->loadData(fn () => $this->gateway()->adminRecordsPage(auth()->user(), $this->entity, ['search' => $this->search, 'pendingOnly' => $this->pendingOnly], $this->pageNumber));
+            if ($this->listResult && $this->pageNumber > $this->listResult['meta']['lastPage']) {
+                $this->pageNumber = $this->listResult['meta']['lastPage'];
+                $this->listResult = $this->loadData(fn () => $this->gateway()->adminRecordsPage(auth()->user(), $this->entity, ['search' => $this->search, 'pendingOnly' => $this->pendingOnly], $this->pageNumber));
+            }
+            $this->listLoaded = true;
+        }
+
+        return $this->listResult;
     }
 
     public function table(Table $table): Table
@@ -69,9 +102,7 @@ class Records extends GatewayPage implements HasTable
         return $table->records(function (): array {
             abort_unless(in_array($this->entity, ['workers', 'customers', 'categories', 'requests', 'bookings', 'reviews', 'complaints'], true), 404);
 
-            return collect($this->gateway()->adminRecords(auth()->user(), $this->entity)['data'])
-                ->filter(fn (array $record): bool => $this->matchesFilters($record))
-                ->keyBy('id')->all();
+            return collect($this->recordsPage()['data'] ?? [])->keyBy('id')->all();
         })->columns([
             TextColumn::make('displayName')->label('Record')->state(fn (array $record): string => $record['name'] ?? $record['label'] ?? $record['title'] ?? $record['id'])->description(fn (array $record): string => $record['id'])->wrap(),
             TextColumn::make('details')->label('Details')->state(fn (array $record): string => $record['town'] ?? $record['description'] ?? $record['email'] ?? $record['comment'] ?? (isset($record['workerId']) ? 'Worker '.$record['workerId'] : 'Record'))->wrap()->limit(100),
@@ -88,12 +119,19 @@ class Records extends GatewayPage implements HasTable
     {
         abort_unless(in_array($this->detailTab, ['profile', 'changes'], true), 404);
         abort_unless(in_array($this->entity, ['workers', 'customers', 'categories', 'requests', 'bookings', 'reviews', 'complaints'], true), 404);
-        $all = $this->gateway()->adminRecords(auth()->user(), $this->entity)['data'];
-        $selected = $this->recordId ? collect($all)->firstWhere('id', $this->recordId) : null;
-        abort_if($this->recordId && ! $selected, 404);
-        $records = collect($all)->filter(fn (array $record): bool => $this->matchesFilters($record))->values()->all();
+        $selected = null;
+        $records = [];
+        $meta = null;
+        if ($this->recordId) {
+            $result = $this->loadData(fn () => $this->gateway()->adminRecord(auth()->user(), $this->entity, $this->recordId));
+            $selected = $result['data'] ?? null;
+        } else {
+            $result = $this->recordsPage();
+            $records = $result['data'] ?? [];
+            $meta = $result['meta'] ?? null;
+        }
 
-        return compact('records', 'selected');
+        return compact('records', 'selected', 'meta');
     }
 
     public function editCategoryAction(): Action
@@ -101,7 +139,7 @@ class Records extends GatewayPage implements HasTable
         return Action::make('editCategory')->label('Edit description')->icon('heroicon-o-pencil-square')->modalHeading('Edit category')
             ->modalDescription('The exact category labels and stable identifiers are preserved for the future classifier.')
             ->fillForm(function (array $arguments) {
-                return collect($this->gateway()->adminRecords(auth()->user(), 'categories')['data'])->firstWhere('id', $arguments['id']) ?? abort(404);
+                return $this->gateway()->adminRecord(auth()->user(), 'categories', $arguments['id'])['data'];
             })
             ->schema([Textarea::make('description')->required()->minLength(10)->maxLength(300)->rows(3), Textarea::make('exampleRequest')->label('Example request')->required()->minLength(15)->maxLength(2000)->rows(3)])
             ->action(function (array $arguments, array $data) {

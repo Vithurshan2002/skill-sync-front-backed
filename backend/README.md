@@ -242,9 +242,20 @@ Email verification/recovery, payment processing, email/SMS delivery, account sus
 
 ### Service organization
 
-Application operations in `app/services/` are split into `account_service.py`, `profile_service.py`, `request_service.py`, `booking_service.py`, `matching_service.py`, and `notification_service.py`. Shared query/pagination helpers are in `service_queries.py`; profile-review and location rules remain in `workflows.py`. Routers import the feature modules directly; the services package initializer does not eagerly import them.
+Administrative writes and photo processing/storage live in `app/services/admin_service.py` and `app/services/photo_service.py`. HTTP routes retain transport validation and authentication dependencies.
+
+Other application operations in `app/services/` are split into `account_service.py`, `profile_service.py`, `request_service.py`, `booking_service.py`, `matching_service.py`, and `notification_service.py`. Shared query/pagination helpers are in `service_queries.py`; profile-review and location rules remain in `workflows.py`. Routers import the feature modules directly; the services package initializer does not eagerly import them.
 
 Service write operations commit their own transaction. Helpers such as `notify()` only stage changes so booking events, notifications and record updates commit together. The refactor preserves booking row-lock order, ownership checks, endpoint paths and response schemas. No database migration is required for this restructuring.
+
+### List filters
+
+- `GET /api/v1/bookings`: `page`, `perPage`, exact `status`, and `search` (request title or town). Dashboard previews can use `group=active|confirmed` and `order=scheduled_asc|scheduled_desc`.
+- `GET /api/v1/admin/{entity}`: `page`, `perPage`, `search`, and `pendingOnly=true` for complete pending worker applications.
+- `GET /api/v1/notifications`: `page`, `perPage`, and `unread=true`.
+- `GET /api/v1/requests`: `page` and `perPage`.
+
+Filters and ownership restrictions are applied before counting and paging. Search is case-insensitive with literal wildcard characters. Filter changes reset frontend page selection. Failed reads show retry states instead of empty results. Admin details use the single-record endpoint rather than downloading every record.
 
 ### Running checks
 

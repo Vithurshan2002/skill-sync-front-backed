@@ -24,8 +24,38 @@ class Bookings extends GatewayPage
     #[Url]
     public string $status = '';
 
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public int $pageNumber = 1;
+
+    public function clearFilters(): void
+    {
+        $this->status = '';
+        $this->search = '';
+        $this->pageNumber = 1;
+    }
+
+    public function updatedStatus(): void
+    {
+        $this->pageNumber = 1;
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->pageNumber = 1;
+    }
+
     protected function getViewData(): array
     {
-        return ['bookings' => $this->gateway()->bookings(auth()->user(), ['status' => $this->status])['data'], 'area' => 'customer', 'recordPath' => 'bookings'];
+        $this->pageNumber = max(1, min(1000000, $this->pageNumber));
+        $result = $this->loadData(fn () => $this->gateway()->bookingsPage(auth()->user(), ['status' => $this->status, 'search' => $this->search], $this->pageNumber));
+        if ($result && $this->pageNumber > $result['meta']['lastPage']) {
+            $this->pageNumber = $result['meta']['lastPage'];
+            $result = $this->loadData(fn () => $this->gateway()->bookingsPage(auth()->user(), ['status' => $this->status, 'search' => $this->search], $this->pageNumber));
+        }
+
+        return ['bookings' => $result['data'] ?? [], 'meta' => $result['meta'] ?? null, 'area' => static::$role, 'recordPath' => static::$role === 'worker' ? 'jobs' : 'bookings'];
     }
 }

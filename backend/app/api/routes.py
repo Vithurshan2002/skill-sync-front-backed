@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
@@ -198,10 +198,44 @@ def recommendations(request_id: str, data: s.RecommendationFilters, user: Curren
 
 
 @router.get("/bookings", response_model=s.Page[s.BookingView], tags=["Bookings"])
-def bookings(user: CurrentUser, db: Db, page: PageNumber = 1, per_page: PageSize = 20):
+def bookings(
+    user: CurrentUser,
+    db: Db,
+    page: PageNumber = 1,
+    per_page: PageSize = 20,
+    status: Literal[
+        "pending",
+        "accepted",
+        "in_progress",
+        "awaiting_confirmation",
+        "completed",
+        "rejected",
+        "cancelled",
+    ]
+    | None = None,
+    search: str | None = Query(default=None, max_length=200),
+    group: Literal["active", "confirmed"] | None = None,
+    order: Literal["scheduled_desc", "scheduled_asc"] = "scheduled_desc",
+):
     query = service_queries.booking_query(user, db).order_by(
-        m.Booking.created_at.desc(), m.Booking.id
+        m.Booking.scheduled_at.asc() if order == "scheduled_asc" else m.Booking.scheduled_at.desc(),
+        m.Booking.id,
     )
+    if group:
+        statuses = ["accepted", "in_progress", "awaiting_confirmation"]
+        if group == "active":
+            statuses.append("pending")
+        query = query.where(m.Booking.status.in_(statuses))
+    if status:
+        query = query.where(m.Booking.status == status)
+    if search and search.strip():
+        needle = search.strip().lower()
+        query = query.where(
+            m.Booking.request.has(
+                func.lower(m.ServiceRequest.title).contains(needle, autoescape=True)
+                | func.lower(m.ServiceRequest.town).contains(needle, autoescape=True)
+            )
+        )
     return service_queries.page_result(db, query, out.booking, page, per_page)
 
 

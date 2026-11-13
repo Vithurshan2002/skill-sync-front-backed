@@ -1,7 +1,10 @@
 <section class="ss-workspace-notifications" aria-label="Your notifications" wire:poll.30s>
-    <div class="ss-filter-tabs" aria-label="Filter notifications"><button wire:click="$set('filter', 'all')" @class(['is-active' => $filter === 'all'])>All notifications</button><button wire:click="$set('filter', 'unread')" @class(['is-active' => $filter === 'unread'])>Unread <span>{{ $unread }}</span></button></div>
+    <div class="ss-filter-tabs" aria-label="Filter notifications"><button wire:click="$set('filter', 'all')" @class(['is-active' => $filter === 'all'])>All notifications</button><button wire:click="$set('filter', 'unread')" @class(['is-active' => $filter === 'unread'])>Unread @if($unread !== null)<span>{{ $unread }}</span>@endif</button></div>
     @if($readError)<p class="ss-alert" role="alert">{{ $readError }}</p>@endif
-    <x-loading-region target="filter" :count="count($items) ?: 4" label="Loading notifications?">
+    @if($loadError)
+        <x-api-error :message="$loadError" />
+    @else
+    <x-loading-region target="filter,pageNumber,$refresh" :count="count($items) ?: 4" label="Loading notifications">
     <div class="ss-card ss-notification-list">
         @forelse($items as $item)
             <article @class(['ss-notification', 'is-unread' => !$item['readAt']]) wire:key="{{ $item['id'] }}">
@@ -22,5 +25,7 @@
             <div class="ss-empty"><x-filament::icon icon="heroicon-o-bell-slash" /><h2>You're all caught up</h2><p>New booking activity will appear here.</p><a class="ss-button ss-button-secondary" href="/{{ auth()->user()->role }}/dashboard">Back to workspace</a></div>
         @endforelse
     </div>
+    <x-api-pagination :meta="$meta" />
     </x-loading-region>
+    @endif
 </section>

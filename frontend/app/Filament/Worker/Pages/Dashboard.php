@@ -25,7 +25,7 @@ class Dashboard extends GatewayPage
 
     protected function getViewData(): array
     {
-        return ['bookings' => $this->gateway()->bookings(auth()->user())['data'], 'worker' => $this->gateway()->profile(auth()->user())['data']];
+        return $this->loadData(fn () => ['pending' => $this->gateway()->bookingsPage(auth()->user(), ['status' => 'pending', 'order' => 'scheduled_asc'])['data'], 'upcoming' => $this->gateway()->bookingsPage(auth()->user(), ['group' => 'confirmed', 'order' => 'scheduled_asc'])['data'], 'worker' => $this->gateway()->profile(auth()->user())['data']]) ?? ['pending' => [], 'upcoming' => [], 'worker' => []];
     }
 
     protected function getHeaderWidgets(): array

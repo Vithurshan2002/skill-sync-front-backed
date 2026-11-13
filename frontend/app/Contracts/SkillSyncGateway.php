@@ -21,6 +21,8 @@ interface SkillSyncGateway
 
     public function requests(User $user): array;
 
+    public function requestsPage(User $user, int $page = 1): array;
+
     public function request(User $user, string $id): array;
 
     public function createRequest(User $user, array $input): array;
@@ -32,6 +34,14 @@ interface SkillSyncGateway
     public function recommendations(User $user, string $id, array $filters = []): array;
 
     public function bookings(User $user, array $filters = []): array;
+
+    public function bookingsPage(User $user, array $filters = [], int $page = 1): array;
+
+    public function adminRecordsPage(User $user, string $entity, array $filters = [], int $page = 1): array;
+
+    public function adminRecord(User $user, string $entity, string $id): array;
+
+    public function notificationsPage(User $user, bool $unread = false, int $page = 1): array;
 
     public function booking(User $user, string $id): array;
 

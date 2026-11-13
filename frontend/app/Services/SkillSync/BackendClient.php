@@ -78,6 +78,18 @@ class BackendClient
         return $result;
     }
 
+    public function page(string $path, array $filters = [], int $page = 1): array
+    {
+        $result = $this->send('GET', $path, [...$filters, 'page' => $page, 'perPage' => 20]);
+        $meta = $result['meta'] ?? [];
+        if (($meta['page'] ?? null) !== $page || ! is_int($meta['total'] ?? null)
+            || $meta['total'] < 0 || ! is_int($meta['lastPage'] ?? null) || $meta['lastPage'] < 1) {
+            throw new HttpException(503, 'The service returned invalid pagination.');
+        }
+
+        return $result;
+    }
+
     /** Existing workspace tables consume all records; follow API pagination without truncating. */
     public function all(string $path, array $filters = []): array
     {

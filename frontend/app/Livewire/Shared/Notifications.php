@@ -4,6 +4,7 @@ namespace App\Livewire\Shared;
 
 use App\Contracts\SkillSyncGateway;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -11,6 +12,14 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class Notifications extends Component
 {
     public string $filter = 'all';
+
+    #[Url]
+    public int $pageNumber = 1;
+
+    public function updatedFilter(): void
+    {
+        $this->pageNumber = 1;
+    }
 
     public ?string $readError = null;
 
@@ -73,12 +82,28 @@ class Notifications extends Component
 
     public function render()
     {
-        $items = app(SkillSyncGateway::class)->notifications(auth()->user())['data'];
-        $unread = collect($items)->whereNull('readAt')->count();
-        if ($this->filter === 'unread') {
-            $items = array_values(array_filter($items, fn ($item) => $item['readAt'] === null));
+        $items = [];
+        $meta = null;
+        $unread = null;
+        $loadError = null;
+        $this->pageNumber = max(1, min(1000000, $this->pageNumber));
+        try {
+            $gateway = app(SkillSyncGateway::class);
+            $result = $gateway->notificationsPage(auth()->user(), $this->filter === 'unread', $this->pageNumber);
+            if ($this->pageNumber > $result['meta']['lastPage']) {
+                $this->pageNumber = $result['meta']['lastPage'];
+                $result = $gateway->notificationsPage(auth()->user(), $this->filter === 'unread', $this->pageNumber);
+            }
+            $unread = $this->filter === 'unread' ? $result['meta']['total'] : $gateway->unreadNotificationCount(auth()->user());
+            $items = $result['data'];
+            $meta = $result['meta'];
+        } catch (HttpException $exception) {
+            if ($exception->getStatusCode() < 500) {
+                throw $exception;
+            }
+            $loadError = 'Notifications could not be loaded. Please try again.';
         }
 
-        return view('livewire.shared.notifications', compact('items', 'unread'));
+        return view('livewire.shared.notifications', compact('items', 'unread', 'meta', 'loadError'));
     }
 }

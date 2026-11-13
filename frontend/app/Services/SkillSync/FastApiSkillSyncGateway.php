@@ -13,6 +13,8 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
 {
     public function __construct(private BackendClient $api) {}
 
+    private const REQUEST_FIELDS = ['title', 'description', 'town', 'address', 'preferredAt', 'budgetLkr', 'category', 'latitude', 'longitude'];
+
     private function id(string $id): string
     {
         return rawurlencode($id);
@@ -65,6 +67,11 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
         return $this->api->all('/requests');
     }
 
+    public function requestsPage(User $user, int $page = 1): array
+    {
+        return $this->api->page('/requests', [], $page);
+    }
+
     public function request(User $user, string $id): array
     {
         return $this->api->send('GET', '/requests/'.$this->id($id));
@@ -72,7 +79,7 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
 
     public function createRequest(User $user, array $input): array
     {
-        return $this->api->send('POST', '/requests', $this->input($input, ['title', 'description', 'town', 'address', 'preferredAt', 'budgetLkr', 'category', 'latitude', 'longitude'], ['preferredAt']));
+        return $this->api->send('POST', '/requests', $this->input($input, self::REQUEST_FIELDS, ['preferredAt']));
     }
 
     public function classifyRequest(User $user, string $id): array
@@ -82,7 +89,7 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
 
     public function updateRequest(User $user, string $id, array $input): array
     {
-        return $this->api->send('PATCH', '/requests/'.$this->id($id), $this->input($input, ['title', 'description', 'town', 'address', 'preferredAt', 'budgetLkr', 'category', 'latitude', 'longitude'], ['preferredAt']));
+        return $this->api->send('PATCH', '/requests/'.$this->id($id), $this->input($input, self::REQUEST_FIELDS, ['preferredAt']));
     }
 
     public function recommendations(User $user, string $id, array $filters = []): array
@@ -92,12 +99,30 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
 
     public function bookings(User $user, array $filters = []): array
     {
-        $result = $this->api->all('/bookings');
-        if (! empty($filters['status'])) {
-            $result['data'] = array_values(array_filter($result['data'], fn ($record) => $record['status'] === $filters['status']));
-        }
+        return $this->api->all('/bookings', array_filter(Arr::only($filters, ['status', 'search', 'group', 'order']), fn ($value) => $value !== '' && $value !== null));
+    }
 
-        return $result;
+    public function bookingsPage(User $user, array $filters = [], int $page = 1): array
+    {
+        return $this->api->page('/bookings', array_filter(Arr::only($filters, ['status', 'search', 'group', 'order']), fn ($value) => $value !== '' && $value !== null), $page);
+    }
+
+    public function adminRecordsPage(User $user, string $entity, array $filters = [], int $page = 1): array
+    {
+        $filters = Arr::only($filters, ['search', 'pendingOnly']);
+        $filters['pendingOnly'] = ! empty($filters['pendingOnly']) ? 'true' : 'false';
+
+        return $this->api->page('/admin/'.$this->id($entity), $filters, $page);
+    }
+
+    public function adminRecord(User $user, string $entity, string $id): array
+    {
+        return $this->api->send('GET', '/admin/'.$this->id($entity).'/'.$this->id($id));
+    }
+
+    public function notificationsPage(User $user, bool $unread = false, int $page = 1): array
+    {
+        return $this->api->page('/notifications', ['unread' => $unread ? 'true' : 'false'], $page);
     }
 
     public function booking(User $user, string $id): array
@@ -168,16 +193,20 @@ final class FastApiSkillSyncGateway implements SkillSyncGateway
             $allowed = [...$allowed, 'bio', 'categories', 'serviceTowns', 'yearsExperience', 'rateLkr', 'rateUnit', 'available', 'latitude', 'longitude', 'serviceRadiusKm'];
         }
         $this->api->send('PATCH', $user->role === 'worker' ? '/worker/profile' : '/me', $this->input($input, $allowed));
-        app(BackendIdentity::class)->sync($this->api->send('GET', '/me')['data'], $user);
+        $result = $this->api->send('GET', '/me');
+        app(BackendIdentity::class)->sync($result['data'], $user);
+        if ($user->role === 'worker') {
+            $result['data'] = [...$result['data'], ...$this->api->send('GET', '/worker/profile')['data']];
+        }
 
-        return $this->profile($user);
+        return $result;
     }
 
     public function performance(User $user): array
     {
         $result = $this->api->send('GET', '/worker/performance');
         $result['data']['worker'] = $this->api->send('GET', '/worker/profile')['data'];
-        $result['data']['bookings'] = $this->bookings($user, ['status' => 'completed'])['data'];
+        $result['data']['bookings'] = $this->bookingsPage($user, ['status' => 'completed'])['data'];
 
         return $result;
     }

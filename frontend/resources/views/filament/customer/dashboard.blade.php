@@ -1,4 +1,8 @@
 <x-filament-panels::page>
+    @if($loadError)
+        <x-api-error :message="$loadError" />
+    @else
+
     <div class="ss-panel-welcome"><span class="ss-eyebrow">YOUR SPACE</span><p>Welcome back, {{ explode(' ', auth()->user()->name)[0] }} <span aria-hidden="true">✦</span></p></div>
     <div class="ss-panel-columns">
         <section class="ss-card">
@@ -21,12 +25,16 @@
             <p class="ss-small ss-muted">Local professionals. Clear work history.</p>
         </aside>
     </div>
-    <section class="ss-card"><div class="ss-section-heading"><h2>Your requests</h2><span class="ss-muted">{{ count($requests) }} requests</span></div>
-        @forelse(collect($requests)->reverse() as $request)
+    <x-loading-region target="pageNumber,$refresh" label="Loading requests">
+    <section class="ss-card"><div class="ss-section-heading"><h2>Your requests</h2><span class="ss-muted">{{ $meta['total'] }} requests</span></div>
+        @forelse($requests as $request)
             <a class="ss-record-row" href="/customer/requests/{{ $request['id'] }}"><div class="ss-record-copy"><strong>{{ $request['title'] }}</strong><span>{{ $request['category'] ?? 'Category to be selected' }} · {{ $request['town'] }}</span></div><x-status-badge :status="$request['status']" /><span aria-hidden="true">↗</span></a>
         @empty <div class="ss-empty"><p>Your first request is one small step away.</p></div> @endforelse
     </section>
+    <x-api-pagination :meta="$meta" />
+    </x-loading-region>
     @if(count($notifications))
-        <section class="ss-card"><div class="ss-section-heading"><h2>Recent updates</h2><a class="ss-text-link" href="/notifications">View all →</a></div>@foreach(collect($notifications)->reverse()->take(3) as $notification)<a class="ss-record-row" href="{{ $notification['targetPath'] }}"><x-filament::icon icon="heroicon-o-bell" /><div class="ss-record-copy"><strong>{{ $notification['message'] }}</strong><span>{{ $this->localDate($notification['createdAt']) }}</span></div></a>@endforeach</section>
+        <section class="ss-card"><div class="ss-section-heading"><h2>Recent updates</h2><a class="ss-text-link" href="/notifications">View all →</a></div>@foreach(collect($notifications)->take(3) as $notification)<a class="ss-record-row" href="{{ $notification['targetPath'] }}"><x-filament::icon icon="heroicon-o-bell" /><div class="ss-record-copy"><strong>{{ $notification['message'] }}</strong><span>{{ $this->localDate($notification['createdAt']) }}</span></div></a>@endforeach</section>
+    @endif
     @endif
 </x-filament-panels::page>

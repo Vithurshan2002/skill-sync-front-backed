@@ -24,6 +24,6 @@ class Performance extends GatewayPage
 
     protected function getViewData(): array
     {
-        return ['performanceData' => $this->gateway()->performance(auth()->user())['data']];
+        return ['performanceData' => $this->loadData(fn () => $this->gateway()->performance(auth()->user())['data'])];
     }
 }

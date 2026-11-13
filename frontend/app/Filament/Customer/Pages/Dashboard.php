@@ -5,6 +5,7 @@ namespace App\Filament\Customer\Pages;
 use App\Filament\Shared\GatewayPage;
 use App\Filament\Shared\WorkspaceStats;
 use Filament\Actions\Action;
+use Livewire\Attributes\Url;
 
 class Dashboard extends GatewayPage
 {
@@ -32,12 +33,24 @@ class Dashboard extends GatewayPage
         return [WorkspaceStats::class];
     }
 
+    #[Url]
+    public int $pageNumber = 1;
+
     protected function getViewData(): array
     {
-        $requests = $this->gateway()->requests(auth()->user())['data'];
-        $bookings = $this->gateway()->bookings(auth()->user())['data'];
-        $notifications = $this->gateway()->notifications(auth()->user())['data'];
+        $this->pageNumber = max(1, min(1000000, $this->pageNumber));
+        $result = $this->loadData(function (): array {
+            $page = $this->gateway()->requestsPage(auth()->user(), $this->pageNumber);
+            if ($this->pageNumber > $page['meta']['lastPage']) {
+                $this->pageNumber = $page['meta']['lastPage'];
+                $page = $this->gateway()->requestsPage(auth()->user(), $this->pageNumber);
+            }
 
-        return compact('requests', 'bookings', 'notifications');
+            return ['requests' => $page['data'], 'meta' => $page['meta'],
+                'bookings' => $this->gateway()->bookingsPage(auth()->user(), ['group' => 'active', 'order' => 'scheduled_asc'])['data'],
+                'notifications' => $this->gateway()->notificationsPage(auth()->user())['data']];
+        });
+
+        return $result ?? ['requests' => [], 'meta' => null, 'bookings' => [], 'notifications' => []];
     }
 }

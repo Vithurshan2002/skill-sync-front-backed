@@ -17,6 +17,8 @@ abstract class GatewayPage extends Page
 
     public ?string $gatewayError = null;
 
+    public ?string $loadError = null;
+
     public static function canAccess(): bool
     {
         return auth()->check() && auth()->user()->role === static::$role;
@@ -42,6 +44,21 @@ abstract class GatewayPage extends Page
     protected function success(string $message): void
     {
         Notification::make()->title($message)->success()->send();
+    }
+
+    protected function loadData(callable $operation): mixed
+    {
+        $this->loadError = null;
+        try {
+            return $operation();
+        } catch (HttpException $exception) {
+            if ($exception->getStatusCode() < 500) {
+                throw $exception;
+            }
+            $this->loadError = 'The service is temporarily unavailable. Please try again.';
+
+            return null;
+        }
     }
 
     protected function perform(callable $operation, ?string $statePath = null): mixed
