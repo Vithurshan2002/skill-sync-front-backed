@@ -1,12 +1,12 @@
 @props(['target', 'variant' => 'rows', 'count' => 4, 'label' => 'Loading results?'])
-<div class="ss-async-region" wire:loading.attr="aria-busy" wire:target="{{ $target }}">
+<div @class(['ss-async-region', 'ss-async-table' => $variant === 'table']) wire:loading.attr="aria-busy" wire:target="{{ $target }}">
     <div class="ss-async-content" wire:loading.delay.class="ss-async-pending" wire:loading.attr="inert" wire:target="{{ $target }}">
         {{ $slot }}
     </div>
     <div class="ss-async-placeholder" style="display: none" wire:loading.delay.block wire:target="{{ $target }}">
         <p class="sr-only" role="status">{{ $label }}</p>
         <div @class(['ss-recommendation-grid' => $variant === 'cards', 'ss-skeleton-rows' => $variant !== 'cards']) aria-hidden="true">
-            @for($row = 0; $row < max(1, min(6, $count)); $row++)
+            @for($row = 0; $row < max(1, min($variant === 'table' ? 20 : 6, $count)); $row++)
                 @if($variant === 'cards')
                     <div class="ss-card ss-skeleton-match">
                         <span class="ss-skeleton ss-skeleton-avatar"></span>

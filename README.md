@@ -2,7 +2,7 @@
 
 SkillSync connects customers with local service professionals in Sri Lanka. It includes a public worker directory and separate customer, worker, and administrator workspaces.
 
-This README describes the current implementation as of **13 November 2026**. Business data is read from and written to PostgreSQL through the FastAPI backend. AI classification and trained predictions are not implemented in this workspace.
+This README describes the current implementation as of **23 November 2026**. Business data is read from and written to PostgreSQL through the FastAPI backend. AI classification and trained predictions are not implemented in this workspace.
 
 ## Architecture
 
@@ -38,6 +38,57 @@ Laravel calls the API over HTTP; it does not connect directly to PostgreSQL. Bac
 
 This is a layered application with incremental refactoring, not a strict Clean Architecture implementation. Admin writes and photo processing/storage use dedicated services. Gateway responses remain arrays; this is not a full domain/entity abstraction.
 
+## Project structure
+
+```text
+skillsync/
+|-- README.md
+|-- backend/
+|   |-- app/
+|   |   |-- api/              # HTTP routes, admin endpoints and photo endpoints
+|   |   |-- core/             # Settings, database sessions, authentication and errors
+|   |   |-- models/           # SQLAlchemy models
+|   |   |-- schemas/          # API validation, response types and serializers
+|   |   |-- services/         # Business rules, queries and transactions
+|   |   |-- main.py           # FastAPI application and health endpoints
+|   |   |-- cli.py            # Database setup, categories, admin and sample data commands
+|   |   |-- catalog.py        # Supported service categories
+|   |   `-- sample_data.py    # Explicit local demonstration seeding
+|   |-- migrations/versions/ # Alembic database migrations
+|   |-- storage/worker-photos/ # Runtime uploads; excluded from Git
+|   |-- tests/               # API, workflow and isolated browser tests
+|   |-- pyproject.toml
+|   `-- uv.lock
+`-- frontend/
+    |-- app/
+    |   |-- Contracts/        # SkillSyncGateway interface
+    |   |-- Services/SkillSync/ # HTTP client, gateway and identity synchronization
+    |   |-- Filament/         # Customer, Worker, Admin and Shared workspace pages
+    |   |-- Livewire/         # Public directory and shared interactive components
+    |   |-- Http/             # Controllers and session middleware
+    |   |-- Providers/        # Application bindings and panel configuration
+    |   |-- Models/           # Local Laravel identity model
+    |   |-- DTOs/             # Data-transfer types; gateway still returns arrays
+    |   `-- Enums/            # Roles and domain status values
+    |-- resources/
+    |   |-- views/            # Public pages, workspace templates and shared components
+    |   |-- css/              # Shared styles and Filament workspace theme
+    |   `-- js/               # Public interactions, location map and photo cropping
+    |-- routes/              # Public/authentication routes and console routes
+    |-- database/            # Laravel migrations, factories and local SQLite file
+    |-- public/              # Static assets and generated Vite build
+    |-- config/              # Laravel and backend gateway configuration
+    |-- tests/               # PHPUnit feature tests and Playwright browser tests
+    |-- docs/api-contract.md
+    |-- composer.json / composer.lock
+    `-- package.json / package-lock.json
+```
+
+This map highlights application code and supporting directories. Installed dependencies
+(`backend/.venv`, `frontend/vendor`, `frontend/node_modules`), caches, logs and test
+artifacts are generated locally. Private `.env` files, PostgreSQL data and uploaded
+photos are not transferred by cloning the repository.
+
 ## Fresh clone: complete Windows setup
 
 Follow these steps in **PowerShell**. The commands below start from the repository root unless stated otherwise. A Git clone does not include your PostgreSQL records, private environment files or installed dependencies.
@@ -68,10 +119,10 @@ If Python is installed through the Windows launcher, check it with `py --version
 
 ### 2. Clone the repository
 
-Replace `YOUR_REPOSITORY_URL` with the HTTPS or SSH URL from your repository's **Code** button. This workspace has no configured Git remote, so the actual URL is not available here.
+Clone the configured GitHub repository below. If using a fork, substitute its clone URL.
 
 ```powershell
-git clone YOUR_REPOSITORY_URL skillsync
+git clone https://github.com/Vithurshan2002/skill-sync-front-backed.git skillsync
 cd skillsync
 ```
 
@@ -260,6 +311,7 @@ Restart the backend after Python changes if the running process has not reloaded
 | Swagger requires a bearer token | Log in/register through the API and paste `data.accessToken` into Authorize. Website login manages tokens automatically. |
 | Worker does not appear in results | Check profile completeness, administrator approval, category, coverage and availability filters. |
 | Photo still has an old crop or white padding | Select the original photo again, adjust the crop preview and save. Previously generated images are not automatically regenerated. Check that the backend has restarted after image-processing changes. |
+| First dashboard login is unstyled but refresh works | Check `frontend/storage/logs/laravel.log` and the frontend server output. A local first-render request has exceeded PHP's 30-second limit during Filament rendering. Precompile templates with `php artisan view:cache`; investigate slow rendering/API calls if it persists. This is separate from skeleton loading. |
 | Dashboard shows loading cards briefly | Customer/worker statistics load in a separate request. The skeleton is replaced when that request completes; it does not reduce API response time. If it persists, check the backend and the failed request in browser developer tools. |
 
 ## Accounts and roles
@@ -309,13 +361,19 @@ Times are stored in UTC and displayed in Asia/Colombo. Rates are quoted in LKR a
 - Consistent public typography, service icons, worker card hierarchy and short biography previews.
 - Notification icons for booking events, reviews, profile approval/change requests and complaints; unknown events retain a bell icon.
 - The notification bell requests unread pagination metadata with `perPage=1`, instead of downloading every notification.
-- Delayed loading skeletons for worker-directory search/filter/pagination, booking/job status filters, recommendation filters, notification filters and admin record search/type/approval filters.
+- Delayed loading skeletons for worker-directory search/filter/pagination, booking/job filters and pagination, recommendation filters, notification filters and admin record search/type/approval/pagination updates. Admin table skeletons cover the retained table height and support up to 20 placeholder rows; pagination remains outside that loading region.
 - Customer and worker dashboards show three statistic-card skeletons while their shared lazy-loaded statistics widget fetches data. The cards are replaced with the real counts when loading completes.
 - Skeletons support responsive layouts and reduced motion. They do not replace Save/Accept/Cancel feedback or flash during background notification polling.
 - Skeletons cover the asynchronous updates above and the dashboard statistics' initial load. Static pages have no artificial loading delays, and skeletons do not make API requests faster.
 - Loading/error/empty states, modal-local API errors and disabled submit feedback.
+- Shared workspace pagination uses centred Previous/Next controls, nearby page numbers, first/last-page shortcuts and ellipsis gaps. The current page is highlighted; buttons disable during requests. Mobile uses Previous/Next controls. The former page-count/results sentence is not displayed.
+- Workspace page subheadings and matching explanations use compact 14px typography. Form dropdown heights/padding align their text and arrows with other controls.
+- Jobs and Bookings share a compact search field with a search icon, role-specific label, responsive width and focus styling. Search keeps its 300ms debounce and server-side filters.
+- Workspace tables have light-purple headers, 2px borders/row separators and a subtle hover/keyboard-focus highlight.
+- Admin record actions use an outlined eye-icon **View** button under **Actions**. The label is hidden on small screens; the action retains a tooltip and accessible name.
+- The successful logout banner starts its two-second dismissal timer directly after its markup is parsed, without waiting for Alpine initialization. A manual close button is also available.
 
-Placeholder markup lives in `frontend/resources/views/components/loading-region.blade.php`, the directory's `frontend/resources/views/livewire/public/worker-directory.blade.php`, and `frontend/resources/views/filament/shared/workspace-stats-placeholder.blade.php`. `frontend/app/Filament/Shared/WorkspaceStats.php` selects the dashboard placeholder. Shared styles are in `frontend/resources/css/skillsync.css`.
+Placeholder markup lives in `frontend/resources/views/components/loading-region.blade.php`, the directory's `frontend/resources/views/livewire/public/worker-directory.blade.php`, and `frontend/resources/views/filament/shared/workspace-stats-placeholder.blade.php`. `frontend/app/Filament/Shared/WorkspaceStats.php` selects the dashboard placeholder. Shared base styles are in `frontend/resources/css/skillsync.css`; workspace typography, tables, pagination and table-skeleton sizing are in `frontend/resources/css/filament/theme.css`. Pagination markup is in `frontend/resources/views/components/api-pagination.blade.php`.
 
 ## Worker profile photos
 
@@ -403,8 +461,12 @@ From `frontend/`:
 ```powershell
 php vendor/bin/phpunit tests/Feature/ApiIntegrationTest.php
 php vendor/bin/phpunit tests/Feature/WorkerPhotoTest.php
+php vendor/bin/phpunit tests/Feature/WorkspacePaginationTest.php
+php vendor/bin/phpunit tests/Feature/LocationSearchTest.php
 npm.cmd run build
 ```
+
+**Known test maintenance:** `WorkspacePaginationTest.php` still asserts the removed visible text `Page 1 of 3` / `Page 2 of 3`. Those assertions need to be updated to the current pagination controls. Do not interpret earlier passing results as a passing suite for the latest UI. This documentation update did not rerun the test suites.
 
 Frontend API integration tests use HTTP fakes and test database settings. They do not insert business records into the running application.
 

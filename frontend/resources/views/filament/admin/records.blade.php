@@ -150,8 +150,8 @@
     <section class="ss-card" x-on:click.capture="listScroll = window.scrollY"><div class="ss-section-heading ss-record-list-heading"><h2 class="ss-record-list-title"><span>{{ ucfirst($entity) }}</span><span class="ss-record-count">{{ $meta['total'] ?? 0 }}</span></h2><label class="ss-field"><span class="sr-only">Search records</span><input type="search" wire:model.live.debounce.300ms="search" maxlength="200" placeholder="Search {{ $entity }}…"></label></div>
         <x-loading-region target="entity,search,pendingOnly,pageNumber,$refresh" variant="table" :count="count($records) ?: 5" label="Loading records">
             {{ $this->table }}
-            <x-api-pagination :meta="$meta" />
         </x-loading-region>
+        <x-api-pagination :meta="$meta" />
     </section>
     @endif
     </div>

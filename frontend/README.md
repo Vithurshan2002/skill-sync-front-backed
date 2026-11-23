@@ -5,7 +5,7 @@ worker, and administrator workspaces. Business data comes from the FastAPI servi
 in ../backend and its PostgreSQL database. The frontend has no demo data mode,
 fixture accounts, role shortcuts, or reset action.
 
-Updated for the code as of **13 November 2026**. For clone instructions and database initialization, follow the [root setup guide](../README.md#fresh-clone-complete-windows-setup). Exact dependency versions are recorded in the lockfiles.
+Updated for the code as of **23 November 2026**. For clone instructions and database initialization, follow the [root setup guide](../README.md#fresh-clone-complete-windows-setup). Exact dependency versions are recorded in the lockfiles.
 
 ## Run this workspace
 
@@ -72,10 +72,21 @@ is rule-based and alphabetical, not a learned quality ranking.
 
 All business calls go through SkillSyncGateway and FastApiSkillSyncGateway.
 Customer and worker profile pages share `app/Filament/Shared/ProfilePage.php` for mounting, form state and save feedback; neither role's page inherits the other role's page. Their role-specific fields and worker photo controls stay in the corresponding page classes.
-BackendClient maps API errors, transports per-user tokens, and follows pagination
-for workspace lists. Workspace tables currently collect all API pages for their
-local filters; the public directory uses server pagination. There is no automatic
-retry of booking or review submissions and no fallback dataset.
+BackendClient maps API errors and transports per-user tokens. Bookings/jobs, admin records, notifications and customer requests use server-side pagination; filters run before page counts and slicing. Dashboard previews are bounded. Legacy all-page gateway helpers remain in the code, but the paginated workspace views use the page methods. There is no automatic retry of booking or review submissions and no fallback dataset.
+
+## Code map
+
+- `app/Contracts` and `app/Services/SkillSync`: API boundary, HTTP transport and session identity.
+- `app/Filament/{Customer,Worker,Admin,Shared}`: role-specific pages and shared workspace behaviour.
+- `app/Livewire`: public worker directory and shared interactive components.
+- `app/Http`: public/auth/photo/location controllers and backend-session verification.
+- `resources/views/components`: shared pagination, loading placeholders, avatars and UI fragments.
+- `resources/views/filament`: workspace page templates.
+- `resources/css/skillsync.css`: shared site styles; `resources/css/filament/theme.css`: workspace overrides.
+- `resources/js`: public form interactions, photo cropping and location maps.
+- `tests/Feature` and `tests/browser`: PHP integration coverage and Playwright scenarios.
+
+See the [root folder map](../README.md#project-structure) for the backend and storage layout.
 
 ## Fresh installation
 
@@ -130,8 +141,20 @@ If Chrome is installed instead of Edge, set `$env:PLAYWRIGHT_CHANNEL='chrome'` b
 
 The customer and worker dashboards share `app/Filament/Shared/WorkspaceStats.php`. Its initial lazy-load placeholder uses `resources/views/filament/shared/workspace-stats-placeholder.blade.php` to show three responsive skeleton cards until the statistics request completes.
 
-Directory filtering/pagination, booking/job filters, recommendations, notifications and admin record filters also use loading placeholders. Styles in `resources/css/skillsync.css` respect reduced-motion preferences. Skeletons indicate a pending request; they do not speed up backend responses or impose a minimum loading delay.
+Directory filtering/pagination, booking/job filters, recommendations, notifications and admin record filters also use loading placeholders. Base styles in `resources/css/skillsync.css` respect reduced-motion preferences; `resources/css/filament/theme.css` extends table placeholders across the retained table height. Skeletons indicate a pending request; they do not speed up backend responses or impose a minimum loading delay.
 
+
+## Current workspace UI
+
+- Centred shared pagination with Previous/Next arrows, numbered buttons, active-page highlight and ellipsis gaps; the page-count sentence is hidden. Small screens show Previous/Next controls.
+- Admin pagination remains visible while table skeletons cover the full retained table height, including lower rows. Controls disable while requests are pending.
+- Light-purple table headers, 2px borders and subtle hover/focus highlights.
+- Admin **View** actions use outlined buttons with eye icons and an **Actions** column heading. Small-screen actions retain accessible labels and tooltips.
+- Jobs/Bookings have a compact icon search field; worker and customer labels differ appropriately.
+- Consistent smaller page subheadings, compact helper text and vertically aligned form dropdowns.
+- The successful sign-out banner dismisses after a two-second timer started by its inline script, without waiting for Alpine, and supports manual dismissal.
+
+The root [verification section](../README.md#verification) records commands and the known pagination-test text assertions that need updating following removal of the visible page-count sentence. No full-suite pass is claimed for the current UI.
 
 ## Worker photos
 

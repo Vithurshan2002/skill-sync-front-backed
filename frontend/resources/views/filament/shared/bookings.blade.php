@@ -4,7 +4,13 @@
             <button type="button" @class(['ss-tab', 'is-active' => $status === $value]) wire:click="$set('status', '{{ $value }}')" aria-pressed="{{ $status === $value ? 'true' : 'false' }}">{{ $label }}</button>
         @endforeach
     </div>
-    <label class="ss-field"><span>Search bookings</span><input type="search" wire:model.live.debounce.300ms="search" maxlength="200" placeholder="Request title or town"></label>
+    <div class="ss-workspace-search">
+        <label for="booking-search">{{ $area === 'worker' ? 'Search jobs' : 'Search bookings' }}</label>
+        <div class="ss-workspace-search-control">
+            <x-filament::icon icon="heroicon-o-magnifying-glass" class="ss-workspace-search-icon" />
+            <input id="booking-search" type="search" wire:model.live.debounce.300ms="search" maxlength="200" placeholder="Search by request title or town" autocomplete="off">
+        </div>
+    </div>
     @if($loadError)
         <x-api-error :message="$loadError" />
     @else

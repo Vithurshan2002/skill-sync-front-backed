@@ -30,7 +30,7 @@ class Profile extends ProfilePage
                 ->description('Choose how professionals can reach you about your bookings.')
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->schema([
-                    TextInput::make('phone')->tel()->maxLength(30)->helperText('Enter a number your professional can use to coordinate the job.'),
+                    TextInput::make('phone')->tel()->maxLength(30)->helperText('For booking updates.'),
                     TextInput::make('town')->required()->maxLength(80),
                     Select::make('contactPreference')->label('Preferred contact method')->options(['email' => 'Email', 'phone' => 'Phone'])->required(),
                 ])->columns(2)->columnSpanFull(),

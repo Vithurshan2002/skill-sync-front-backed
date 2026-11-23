@@ -56,12 +56,25 @@
     <main id="main-content" tabindex="-1">
         @if(session('success') || session('status'))
             @if(session('status') === 'You are signed out.' && ! session('success'))
-                <div class="ss-container ss-flash" x-data="{ visible: true }" x-show="visible" x-init="setTimeout(() => visible = false, 5000)">
+                <div id="signout-message" class="ss-container ss-flash">
                     <div class="ss-alert ss-alert-success ss-signout-message">
                         <span role="status">{{ session('status') }}</span>
-                        <button type="button" class="ss-icon-button" aria-label="Dismiss sign out message" @click="visible = false"><x-filament::icon icon="heroicon-o-x-mark" /></button>
+                        <button type="button" class="ss-icon-button" aria-label="Dismiss sign out message"><x-filament::icon icon="heroicon-o-x-mark" /></button>
                     </div>
                 </div>
+                <script>
+                    (() => {
+                        const banner = document.getElementById('signout-message');
+                        if (!banner) return;
+                        // Start immediately; do not wait for Livewire/Alpine to load.
+                        const dismiss = () => banner.remove();
+                        const timer = window.setTimeout(dismiss, 2000);
+                        banner.querySelector('button').addEventListener('click', () => {
+                            window.clearTimeout(timer);
+                            dismiss();
+                        });
+                    })();
+                </script>
             @else
                 <div class="ss-container ss-flash"><div class="ss-alert ss-alert-success" role="status">{{ session('success') ?? session('status') }}</div></div>
             @endif

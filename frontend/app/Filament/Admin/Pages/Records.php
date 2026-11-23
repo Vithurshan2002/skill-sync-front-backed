@@ -107,11 +107,13 @@ class Records extends GatewayPage implements HasTable
             TextColumn::make('displayName')->label('Record')->state(fn (array $record): string => $record['name'] ?? $record['label'] ?? $record['title'] ?? $record['id'])->description(fn (array $record): string => $record['id'])->wrap(),
             TextColumn::make('details')->label('Details')->state(fn (array $record): string => $record['town'] ?? $record['description'] ?? $record['email'] ?? $record['comment'] ?? (isset($record['workerId']) ? 'Worker '.$record['workerId'] : 'Record'))->wrap()->limit(100),
             TextColumn::make('context')->label('Status / context')->state(fn (array $record): string => isset($record['status']) ? ucfirst(str_replace('_', ' ', $record['status'])) : ($this->entity === 'workers' ? ucfirst(str_replace('_', ' ', $record['approvalStatus'] ?? 'pending')) : 'Record'))->badge()->color('gray'),
-        ])->recordActions([
-            Action::make('details')->label('Details')->icon('heroicon-o-eye')->action(function (array $record): void {
-                $this->recordId = $record['id'];
-                $this->detailTab = 'profile';
-            }),
+        ])->recordActionsColumnLabel('Actions')->recordActions([
+            Action::make('details')->label('View')->icon('heroicon-o-eye')->button()->outlined()->labeledFrom('sm')
+                ->tooltip('View details')->extraAttributes(['class' => 'ss-record-view-button', 'aria-label' => 'View details'])
+                ->action(function (array $record): void {
+                    $this->recordId = $record['id'];
+                    $this->detailTab = 'profile';
+                }),
         ])->paginated(false)->emptyStateHeading('No matching records')->emptyStateDescription('Try another search or record type.');
     }
 
